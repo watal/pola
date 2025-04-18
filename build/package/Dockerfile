@@ -1,28 +1,32 @@
-FROM golang:1.24.2
-LABEL maintainer "Motoki TAKENAKA <m.takenaka@ntt.com>"
+# Stage 1: Build
+FROM golang:1.24.2-bookworm AS builder
 
 WORKDIR /pola
 
+# Copy source code and build Pola binary
 COPY . .
-
-# Install packages
-RUN apt-get update \
- && apt-get install -y bash-completion curl iproute2 wget vim iputils-ping net-tools
-
-# Enable Completion 
-RUN echo "" >> ~/.bashrc \
- && echo "if [ -f /etc/bash_completion ] && ! shopt -oq posix; then" >> ~/.bashrc \
- && echo "  . /etc/bash_completion" >> ~/.bashrc \
- && echo "fi" >> ~/.bashrc
-
-# Install Pola
-
-SHELL ["/bin/bash", "-c"]
 RUN go install ./cmd/...
 
-# remove build directory
-RUN rm -rf  ./*
+# Stage 2: Runtime
+FROM debian:bookworm-slim
+LABEL maintainer="Motoki TAKENAKA <m.takenaka@ntt.com>, Wataru Mishima <w.mishima@ntt.com>"
 
-# Add completion
-RUN pola completion bash | tee -a /usr/share/bash-completion/completions/pola >/dev/null \
- && source /usr/share/bash-completion/completions/pola
+# Install packages and clean up
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    bash-completion \
+    iproute2 \
+    vim \
+    iputils-ping \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy the built binaries from the builder stage
+COPY --from=builder /go/bin/pola /usr/local/bin/pola
+COPY --from=builder /go/bin/polad /usr/local/bin/polad
+
+# Enable bash completion in bashrc
+RUN echo 'if [ -f /etc/bash_completion ] && ! shopt -oq posix; then' >> /root/.bashrc && \
+    echo '  . /etc/bash_completion' >> /root/.bashrc && \
+    echo 'fi' >> /root/.bashrc
+
+# Install bash completion for Pola
+RUN pola completion bash > /usr/share/bash-completion/completions/pola
