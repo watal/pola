@@ -2,9 +2,13 @@ name: EditorConfig Checker
 
 on:
   push:
-    branches: [ 'main' ]
+    branches:
+      - main
+      - develop 
   pull_request:
-    branches: [ 'main' ]
+    branches:
+      - main
+      - develop
     types:
       - opened
       - reopened
@@ -13,9 +17,12 @@ on:
 
 jobs:
   editorconfig:
+    name: Run EditorConfig Checker
     runs-on: ubuntu-latest
-    if: github.event.pull_request.draft == false
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: editorconfig-checker/action-editorconfig-checker@main
-      - run: editorconfig-checker
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run EditorConfig Checker
+        uses: editorconfig-checker/action-editorconfig-checker@main
