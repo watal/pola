@@ -398,7 +398,7 @@ func (tlv *SymbolicPathName) Serialize() []byte {
 	padding := (4 - (nameLen % 4)) % 4 // Padding for 4-byte alignment
 
 	buf := make([]byte, 0, TLVHeaderLength+int(nameLen)+int(padding))
-	buf = append(buf, Uint16ToByteSlice(uint16(tlv.Type()))...)
+	buf = append(buf, Uint16ToByteSlice(tlv.Type())...)
 	buf = append(buf, Uint16ToByteSlice(nameLen)...)
 	buf = append(buf, []byte(tlv.Name)...)
 
@@ -682,12 +682,8 @@ func (tlv *SRPCECapability) Serialize() []byte {
 	buf = append(buf, length...)
 
 	val := make([]byte, TLVSRPCECapabilityValueLength)
-	if tlv.HasUnlimitedMaxSIDDepth {
-		val[SRPCECapabilityFlagsIndex] = SetBit(val[SRPCECapabilityFlagsIndex], UnlimitedMaximumSIDDepthFlag)
-	}
-	if tlv.IsNAISupported {
-		val[SRPCECapabilityFlagsIndex] = SetBit(val[SRPCECapabilityFlagsIndex], NAISupportedFlag)
-	}
+	val[SRPCECapabilityFlagsIndex] = SetBit(val[SRPCECapabilityFlagsIndex], UnlimitedMaximumSIDDepthFlag, tlv.HasUnlimitedMaxSIDDepth)
+	val[SRPCECapabilityFlagsIndex] = SetBit(val[SRPCECapabilityFlagsIndex], NAISupportedFlag, tlv.IsNAISupported)
 	val[SRPCECapabilityMSDIndex] = tlv.MaximumSidDepth
 
 	buf = append(buf, val...)
