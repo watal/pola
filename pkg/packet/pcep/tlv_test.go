@@ -7,11 +7,122 @@ package pcep
 
 import (
 	"net/netip"
+	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap/zapcore"
 )
+
+func TestTLVType_String(t *testing.T) {
+	tests := map[string]struct {
+		tlvType  TLVType
+		expected string
+	}{
+		"Valid TLVType (StatefulPCECapability)": {
+			tlvType:  TLVStatefulPCECapability,
+			expected: "STATEFUL-PCE-CAPABILITY (RFC8231)",
+		},
+		"Valid TLVType (IPv4LSPIdentifiers)": {
+			tlvType:  TLVIPv4LSPIdentifiers,
+			expected: "IPV4-LSP-IDENTIFIERS (RFC8231)",
+		},
+		"Unknown TLVType": {
+			tlvType:  TLVType(0x9999), // Invalid type
+			expected: "Unknown TLV (0x9999)",
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			actual := tt.tlvType.String()
+			assert.Equal(t, tt.expected, actual, "unexpected string format")
+		})
+	}
+}
+
+func TestTLVMap(t *testing.T) {
+	tests := []struct {
+		name     string
+		tlvType  TLVType
+		expected TLVInterface
+	}{
+		{
+			name:     "StatefulPCECapability",
+			tlvType:  TLVStatefulPCECapability,
+			expected: &StatefulPCECapability{},
+		},
+		{
+			name:     "SymbolicPathName",
+			tlvType:  TLVSymbolicPathName,
+			expected: &SymbolicPathName{},
+		},
+		{
+			name:     "IPv4LSPIdentifiers",
+			tlvType:  TLVIPv4LSPIdentifiers,
+			expected: &IPv4LSPIdentifiers{},
+		},
+		{
+			name:     "IPv6LSPIdentifiers",
+			tlvType:  TLVIPv6LSPIdentifiers,
+			expected: &IPv6LSPIdentifiers{},
+		},
+		{
+			name:     "LSPDBVersion",
+			tlvType:  TLVLSPDBVersion,
+			expected: &LSPDBVersion{},
+		},
+		{
+			name:     "SRPCECapability",
+			tlvType:  TLVSRPCECapability,
+			expected: &SRPCECapability{},
+		},
+		{
+			name:     "PathSetupType",
+			tlvType:  TLVPathSetupType,
+			expected: &PathSetupType{},
+		},
+		{
+			name:     "ExtendedAssociationID",
+			tlvType:  TLVExtendedAssociationID,
+			expected: &ExtendedAssociationID{},
+		},
+		{
+			name:     "PathSetupTypeCapability",
+			tlvType:  TLVPathSetupTypeCapability,
+			expected: &PathSetupTypeCapability{},
+		},
+		{
+			name:     "AssocTypeList",
+			tlvType:  TLVAssocTypeList,
+			expected: &AssocTypeList{},
+		},
+		{
+			name:     "SRPolicyCPathID",
+			tlvType:  TLVSRPolicyCPathID,
+			expected: &SRPolicyCandidatePathIdentifier{},
+		},
+		{
+			name:     "SRPolicyCPathPreference",
+			tlvType:  TLVSRPolicyCPathPreference,
+			expected: &SRPolicyCandidatePathPreference{},
+		},
+		{
+			name:     "Color",
+			tlvType:  TLVColor,
+			expected: &Color{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actual := tlvMap[tt.tlvType]()
+			if reflect.TypeOf(actual) != reflect.TypeOf(tt.expected) {
+				t.Fatalf("%s: expected type %T, got %T", tt.name, tt.expected, actual)
+			}
+		})
+	}
+}
 
 func TestStatefulPCECapability_DecodeFromBytes(t *testing.T) {
 	tests := []struct {
