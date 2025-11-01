@@ -189,9 +189,18 @@ func convertSrv6SID(nlri *api.LsAddrPrefix, lsAttr *api.Attribute_Ls, path *api.
 		return nil, errors.New("MP-REACH NLRI Attribute is nil")
 	}
 
-	lsSrv6List, err := getLsSrv6SIDList(mpReach.GetNlris(), srv6Attr)
-	if err != nil {
-		return nil, fmt.Errorf("failed to process LS SRv6 SID NLRI: %w", err)
+	var lsSrv6List []table.TEDElem
+	for _, nlri := range mpReach.GetNlris() {
+		lsAddrPrefix := nlri.GetLsAddrPrefix()
+		if lsAddrPrefix == nil {
+			continue
+		}
+
+		lsSrv6SID, err := getLsSrv6SID(lsAddrPrefix, srv6Attr)
+		if err != nil {
+			return nil, fmt.Errorf("failed to process LS SRv6 SID NLRI: %w", err)
+		}
+		lsSrv6List = append(lsSrv6List, lsSrv6SID)
 	}
 
 	return lsSrv6List, nil
@@ -380,13 +389,24 @@ func getLsSrv6SIDList(nlris []*api.NLRI, lsAttrSrv6SID *api.LsAttributeSrv6SID) 
 
 // getLsSrv6SID processes the LS SRv6 SID NLRI and returns a corresponding LsSrv6SID.
 func getLsSrv6SID(typedLinkStateNLRI *api.LsAddrPrefix, lsAttrSrv6SID *api.LsAttributeSrv6SID) (*table.LsSrv6SID, error) {
+	srv6SIDNLRI := typedLinkStateNLRI.Nlri.GetSrv6Sid()
+	if srv6SIDNLRI == nil {
+		return nil, errors.New("LS SRv6 SID NLRI is nil")
+	}
 
 	srv6SIDStructure := lsAttrSrv6SID.GetSrv6SidStructure()
+	if srv6SIDStructure == nil {
+		return nil, errors.New("SRv6 SID Structure is missing")
+	}
+
 	endpointBehavior := lsAttrSrv6SID.GetSrv6EndpointBehavior()
-	srv6SIDNLRI := typedLinkStateNLRI.Nlri.GetSrv6Sid()
+	if endpointBehavior == nil {
+		return nil, errors.New("SRv6 Endpoint Behavior is missing")
+	}
 
 	localNodeID := srv6SIDNLRI.GetLocalNode().GetIgpRouterId()
 	localNodeASN := srv6SIDNLRI.GetLocalNode().GetAsn()
+
 	srv6SIDs := srv6SIDNLRI.GetSrv6SidInformation().GetSids()
 	multiTopoIDs := srv6SIDNLRI.GetMultiTopoId().GetMultiTopoIds()
 
@@ -401,6 +421,20 @@ func getLsSrv6SID(typedLinkStateNLRI *api.LsAddrPrefix, lsAttrSrv6SID *api.LsAtt
 	lsSrv6SID.EndpointBehavior.Algorithm = uint8(endpointBehavior.GetAlgorithm())
 	lsSrv6SID.Sids = srv6SIDs
 	lsSrv6SID.MultiTopoIDs = multiTopoIDs
+
+	// Optional Service Segment information
+	if srv6SIDNLRI.GetServiceChaining() != nil {
+		sc := srv6SIDNLRI.GetServiceChaining()
+		lsSrv6SID.ServiceChaining.ServiceType = sc.GetServicetype()
+		lsSrv6SID.ServiceChaining.TrafficType = sc.GetTraffictype()
+	}
+
+	// Optional Opaque Metadata
+	if srv6SIDNLRI.GetOpaqueMetadata() != nil {
+		meta := srv6SIDNLRI.GetOpaqueMetadata()
+		lsSrv6SID.OpaqueMetadata.OpaqueType = meta.GetOpaquetype()
+		lsSrv6SID.OpaqueMetadata.Value = meta.GetValue()
+	}
 
 	return lsSrv6SID, nil
 }
