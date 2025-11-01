@@ -6,6 +6,7 @@
 package main
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 
@@ -105,6 +106,10 @@ func printTED(jsonFlag bool) error {
 						"sids":             srv6SID.Sids,
 						"endpointBehavior": srv6SID.EndpointBehavior,
 						"multiTopoIDs":     srv6SID.MultiTopoIDs,
+						"serviceType":      srv6SID.ServiceChaining.ServiceType,
+						"trafficType":      srv6SID.ServiceChaining.TrafficType,
+						"opaqueType":       srv6SID.OpaqueMetadata.OpaqueType,
+						"value":            hex.EncodeToString(srv6SID.OpaqueMetadata.Value),
 					}
 					srv6SIDs = append(srv6SIDs, srv6SIDMap)
 				}

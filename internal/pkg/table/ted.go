@@ -157,6 +157,20 @@ func printNodeSRv6SIDs(node *LsNode) {
 			srv6SID.EndpointBehavior.Flags,
 			srv6SID.EndpointBehavior.Algorithm)
 		fmt.Printf("    MultiTopoIDs: %v\n", srv6SID.MultiTopoIDs)
+		if srv6SID.ServiceChaining != nil || srv6SID.OpaqueMetadata != nil {
+			fmt.Println("    TLVs:")
+			if srv6SID.ServiceChaining != nil {
+				fmt.Printf("    ServiceChaining:\n")
+				fmt.Printf("      ServiceType: %d\n", srv6SID.ServiceChaining.ServiceType)
+				fmt.Printf("      TrafficType: %d\n", srv6SID.ServiceChaining.TrafficType)
+			}
+
+			if srv6SID.OpaqueMetadata != nil {
+				fmt.Printf("    OpaqueMetadata:\n")
+				fmt.Printf("      OpaqueType: %d\n", srv6SID.OpaqueMetadata.OpaqueType)
+				fmt.Printf("      Value: 0x%x\n", srv6SID.OpaqueMetadata.Value)
+			}
+		}
 	}
 }
 
@@ -344,11 +358,23 @@ type EndpointBehavior struct {
 }
 
 type LsSrv6SID struct {
-	LocalNode        *LsNode          // primary key, in MP_REACH_NLRI Attr
-	Sids             []string         // in LsSrv6SID Attr
-	EndpointBehavior EndpointBehavior // in BGP-LS Attr
-	SIDStructure     SIDStructure     // in BGP-LS Attr
-	MultiTopoIDs     []uint32         // in LsSrv6SID Attr
+	LocalNode        *LsNode             // primary key, in MP_REACH_NLRI Attr
+	Sids             []string            // LsSrv6SID Attr
+	EndpointBehavior EndpointBehavior    // BGP-LS Attr
+	SIDStructure     SIDStructure        // BGP-LS Attr
+	MultiTopoIDs     []uint32            // LsSrv6SID Attr
+	ServiceChaining  *ServiceChainingTLV // Service Chaining TLV (optional)
+	OpaqueMetadata   *OpaqueMetadataTLV  // Opaque Metadata TLV (optional)
+}
+
+type ServiceChainingTLV struct {
+	ServiceType uint32
+	TrafficType uint32
+}
+
+type OpaqueMetadataTLV struct {
+	OpaqueType uint32
+	Value      []byte
 }
 
 func NewLsSrv6SID(node *LsNode) *LsSrv6SID {
