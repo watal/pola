@@ -43,6 +43,7 @@ message SRPolicy {
   SRPolicyType type = 9;
   repeated Segment segment_list = 10;
   MetricType metric = 11;
+  repeated Segment waypoints = 12;
 }
 
 message CreateSRPolicyRequest {

@@ -7,6 +7,7 @@ package cspf
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/nttcom/pola/internal/pkg/table"
 )
@@ -36,6 +37,38 @@ func CSPF(srcRouterID string, dstRouterID string, as uint32, metric table.Metric
 	}
 
 	return segmentList, nil
+}
+
+func CSPFWithLooseSourceRouting(
+	src string,
+	dst string,
+	waypoints []string,
+	as uint32,
+	metric table.MetricType,
+	ted *table.LsTED,
+) ([]table.Segment, error) {
+
+	var fullList []table.Segment
+
+	// source → first waypoint → ... → last waypoint → destination
+	hops := append([]string{src}, waypoints...)
+	hops = append(hops, dst)
+
+	for i := 0; i < len(hops)-1; i++ {
+		segs, err := CSPF(hops[i], hops[i+1], as, metric, ted)
+		if err != nil {
+			return nil, fmt.Errorf("CSPF failed between %s and %s: %w", hops[i], hops[i+1], err)
+		}
+
+		// avoid duplicate of waypoint SID when concatenating
+		if i > 0 && len(segs) > 0 {
+			segs = segs[1:]
+		}
+
+		fullList = append(fullList, segs...)
+	}
+
+	return fullList, nil
 }
 
 func spf(srcRouterID string, dstRouterID string, metricType table.MetricType, network map[string]*table.LsNode) ([]table.Segment, error) {

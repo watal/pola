@@ -81,6 +81,7 @@ type SRPolicy struct {
 	Color           uint32     `yaml:"color"`
 	Type            string     `yaml:"type"`
 	Metric          string     `yaml:"metric"`
+	Waypoints       []Segment  `yaml:"waypoints"`
 }
 
 type InputFormat struct {
@@ -189,6 +190,7 @@ func addSRPolicyWithSIDValidation(input InputFormat) error {
 	var srPolicyType pb.SRPolicyType
 	var metric pb.MetricType
 	var segmentList []*pb.Segment
+	var waypoints []*pb.Segment
 	switch input.SRPolicy.Type {
 	case "explicit":
 		if len(input.SRPolicy.SegmentList) == 0 {
@@ -220,7 +222,11 @@ func addSRPolicyWithSIDValidation(input InputFormat) error {
 		default:
 			return fmt.Errorf("invalid input `metric`")
 		}
-
+		if len(input.SRPolicy.Waypoints) != 0 {
+			for _, waypoint := range input.SRPolicy.Waypoints {
+				waypoints = append(waypoints, &pb.Segment{Sid: waypoint.SID})
+			}
+		}
 	default:
 		return fmt.Errorf("invalid input `type`")
 	}
@@ -234,6 +240,7 @@ func addSRPolicyWithSIDValidation(input InputFormat) error {
 		Type:            srPolicyType,
 		SegmentList:     segmentList,
 		Metric:          metric,
+		Waypoints:       waypoints,
 	}
 	inputData := &pb.CreateSRPolicyRequest{
 		SrPolicy: srPolicy,

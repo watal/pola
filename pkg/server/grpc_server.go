@@ -324,9 +324,35 @@ func getSegmentList(inputSRPolicy *pb.SRPolicy, asn uint32, ted *table.LsTED) ([
 		if err != nil {
 			return nil, err
 		}
-		segmentList, err = cspf.CSPF(inputSRPolicy.GetSrcRouterId(), inputSRPolicy.GetDstRouterId(), asn, metricType, ted)
-		if err != nil {
-			return nil, err
+		waypoints := inputSRPolicy.GetWaypoints()
+		if len(waypoints) > 0 {
+			wp := make([]string, 0, len(waypoints))
+			for _, w := range waypoints {
+				wp = append(wp, w.GetSid())
+			}
+
+			segmentList, err = cspf.CSPFWithLooseSourceRouting(
+				inputSRPolicy.GetSrcRouterId(),
+				inputSRPolicy.GetDstRouterId(),
+				wp,
+				asn,
+				metricType,
+				ted,
+			)
+			if err != nil {
+				return nil, fmt.Errorf("CSPF with waypoints failed: %w", err)
+			}
+		} else {
+			segmentList, err = cspf.CSPF(
+				inputSRPolicy.GetSrcRouterId(),
+				inputSRPolicy.GetDstRouterId(),
+				asn,
+				metricType,
+				ted,
+			)
+			if err != nil {
+				return nil, fmt.Errorf("CSPF failed: %w", err)
+			}
 		}
 	default:
 		return nil, errors.New("undefined SR Policy type")
